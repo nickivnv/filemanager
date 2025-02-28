@@ -322,7 +322,7 @@ class FileNavigator extends Component {
     const isFile = rowData.type === 'file';
     if (isFile) {
       const { apiOptions } = this.props;
-      const fileOpenCapability = find(initializedCapabilities, (o) => (o.id === 'edit' || o.id === 'view') && o.shouldBeAvailable(apiOptions));
+      const fileOpenCapability = find(initializedCapabilities, (o) => ( o.id === 'edit' || o.id === 'view' || o.id === 'plot' ) && o.shouldBeAvailable(apiOptions));
       if (fileOpenCapability)
         fileOpenCapability.handler();
     }

@@ -33,6 +33,7 @@ const translations = {
     edit: 'Edit',
     view: 'View',
     file: 'File',
+    plot: 'Plot',
     editFileLimit: 'File cannot be loaded, max. size {filesizelimit}KB.'
   },
   fr: {

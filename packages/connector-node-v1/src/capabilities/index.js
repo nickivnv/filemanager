@@ -6,11 +6,13 @@ import rename from './rename';
 import sort from './sort';
 import edit from './edit';
 import view from './view';
+import plot from './plot';
 
 const capabilities = [
   createFolder,
+  plot,
   edit,
-  view,
+  view, // not used -  can get deleted
   rename,
   download,
   upload,
