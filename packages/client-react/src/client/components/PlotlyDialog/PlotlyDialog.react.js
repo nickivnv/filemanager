@@ -5,7 +5,9 @@ import Dialog from '../Dialog';
 import Svg from '@opuscapita/react-svg/lib/SVG';
 import icons from './icons-svg';
 
-import Plot from 'react-plotly.js';
+import Plotly from 'plotly.js-basic-dist-min'
+import createPlotlyComponent from 'react-plotly.js/factory';
+const Plot = createPlotlyComponent(Plotly);
 
 const propTypes = {
   readOnly: PropTypes.bool,
