@@ -5,10 +5,6 @@ import Dialog from '../Dialog';
 import Svg from '@opuscapita/react-svg/lib/SVG';
 import icons from './icons-svg';
 
-import Plotly from 'plotly.js-basic-dist-min'
-import createPlotlyComponent from 'react-plotly.js/factory';
-const Plot = createPlotlyComponent(Plotly);
-
 const propTypes = {
   readOnly: PropTypes.bool,
   headerText: PropTypes.string,
@@ -60,6 +56,11 @@ class PlotlyDialog extends Component {
       }catch(err){}
     }    
     this.setState({ plotlyData: valueArray, plotlyData_sel: 0});
+    Plotly.react( 
+      "plot",
+      valueArray[0]["data"],
+      valueArray[0]["layout"]
+    );
   } 
 
   handleClose = async () => {
@@ -77,6 +78,11 @@ class PlotlyDialog extends Component {
     {
       nbr = 0;
     }
+    Plotly.react( 
+      "plot",
+      this.state.plotlyData[nbr]["data"],
+      this.state.plotlyData[nbr]["layout"]
+    );
     this.setState({ plotlyData_sel: nbr});
   }
 
@@ -86,6 +92,11 @@ class PlotlyDialog extends Component {
     {
       nbr = this.state.plotlyData.length - 1;
     }
+    Plotly.react( 
+      "plot",
+      this.state.plotlyData[nbr]["data"],
+      this.state.plotlyData[nbr]["layout"]
+    );
     this.setState({ plotlyData_sel: nbr});
   }
 
@@ -124,12 +135,7 @@ class PlotlyDialog extends Component {
                 {headerText}
               </div>
 
-              <Plot
-                data={this.state.plotlyData[this.state.plotlyData_sel]["data"]}
-                layout={this.state.plotlyData[this.state.plotlyData_sel]["layout"]}
-                useResizeHandler={true}
-                style={{width: "100%", height: "100%"}}
-              /> 
+              <figure id="plot" className="oc-fm-plotly-dialog-plot"/>
 
             </div>
           </Dialog>
