@@ -46,6 +46,7 @@ class PlotlyDialog extends Component {
   }
 
   initPlotlyData = async (e) => {
+    await this.loadPlotlyCDN();
     let value = await this.props.getFileContent(); 
     value = value.replaceAll("'", '"').split("/*$plotlyData$*/"); // change all ' to ", needed for the json parse and split them with the keyword to extract the data
     let valueArray = [];
@@ -56,11 +57,7 @@ class PlotlyDialog extends Component {
       }catch(err){}
     }    
     this.setState({ plotlyData: valueArray, plotlyData_sel: 0});
-    Plotly.react( 
-      "plot",
-      valueArray[0]["data"],
-      valueArray[0]["layout"]
-    );
+    this.loadPlot(0);
   } 
 
   handleClose = async () => {
@@ -78,12 +75,8 @@ class PlotlyDialog extends Component {
     {
       nbr = 0;
     }
-    Plotly.react( 
-      "plot",
-      this.state.plotlyData[nbr]["data"],
-      this.state.plotlyData[nbr]["layout"]
-    );
     this.setState({ plotlyData_sel: nbr});
+    this.loadPlot(nbr);
   }
 
   handleBack = async () => {
@@ -92,87 +85,72 @@ class PlotlyDialog extends Component {
     {
       nbr = this.state.plotlyData.length - 1;
     }
-    Plotly.react( 
-      "plot",
-      this.state.plotlyData[nbr]["data"],
-      this.state.plotlyData[nbr]["layout"]
-    );
     this.setState({ plotlyData_sel: nbr});
+    this.loadPlot(nbr);
+  }
+
+  loadPlotlyCDN = async () => {
+    const existingScript = document.getElementById('plotly');  
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.plot.ly/plotly-basic-3.0.1.min.js';
+      script.id = 'plotly';
+      document.body.appendChild(script);
+    }
+  }
+
+  loadPlot = (nbr) => {
+    try{
+      Plotly.newPlot( 
+        "plot", // PLot Figure ID
+        this.state.plotlyData[nbr]["data"], // Plot figure Data
+        this.state.plotlyData[nbr]["layout"], // Plot figure layout
+        {responsive: true}
+      );  
+    }
+    catch(e)
+    {      
+      console.log("no Data available!"); // ToDo: This should get shown on Dialog
+    }
   }
 
   render() {
     const { onHide, headerText } = this.props;
-    if (this.state.plotlyData.length != undefined) // toDo: the async read of the plotly data lead to a first plot with undefined data -> the ploting should wait till data ist processed
-    {
-      try{
-        return (
-          <Dialog className="oc-fm-plotly-dialog" onHide={this.handleClose} >
-            <div className="oc-plotly--dialog__content" >
-                
-              <Svg
-                className="oc-plotly--dialog__close-icon"
-                svg={icons.close}
-                onClick={this.handleClose}
-              />                                   
-              
-              {this.state.plotlyData.length>1 ? (
-                <Svg
-                  className="oc-plotly--dialog__next-icon"
-                  svg={icons.next}
-                  onClick={this.handleNext}
-                />   
-              ) : null}                            
+    return (
+      <Dialog className="oc-fm-plotly-dialog" onHide={this.handleClose}>
+        <div className="oc-plotly--dialog__content" >
             
-              {this.state.plotlyData.length>1 ? (
-                <Svg
-                  className="oc-plotly--dialog__back-icon"
-                  svg={icons.back}
-                  onClick={this.handleBack}
-                />        
-              ) : null} 
-
-              <div className="oc-fm--dialog__header">
-                {headerText}
-              </div>
-
-              <figure id="plot" className="oc-fm-plotly-dialog-plot"/>
-
-            </div>
-          </Dialog>
-        );
-      }
-      catch(e){
-        return (
-          <Dialog className="oc-fm-plotly-dialog" onHide={this.handleClose}>
-            <div className="oc-plotly--dialog__content">
-               
-              <Svg
-                className="oc-plotly--dialog__close-icon"
-                svg={icons.close}
-                onClick={this.handleClose}
-              />                
-            
-            </div>
-          </Dialog>
-        );
-      }
-    }    
-    else
-    {
-      return (
-        <Dialog className="oc-fm-plotly-dialog" onHide={this.handleClose}>
-          <div className="oc-plotly--dialog__content">
-             
+          <Svg
+            className="oc-plotly--dialog__close-icon"
+            svg={icons.close}
+            onClick={this.handleClose}
+          />                                   
+          
+          {this.state.plotlyData.length>1 ? (
             <Svg
-              className="oc-plotly--dialog__close-icon"
-              svg={icons.close}
-              onClick={this.handleClose}
-            />                
-            
+              className="oc-plotly--dialog__next-icon"
+              svg={icons.next}
+              onClick={this.handleNext}
+            />   
+          ) : null}                            
+        
+          {this.state.plotlyData.length>1 ? (
+            <Svg
+              className="oc-plotly--dialog__back-icon"
+              svg={icons.back}
+              onClick={this.handleBack}
+            />        
+          ) : null} 
+
+          <div className="oc-fm--dialog__header">
+            {headerText}
           </div>
-        </Dialog>
-      );
-    }
+
+          <div id="plot" className="oc-fm-plotly-dialog-plot"/>            
+
+        </div>
+      </Dialog>
+    );
   }
 }
 
