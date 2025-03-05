@@ -39,6 +39,7 @@ class PlotlyDialog extends Component {
   componentDidMount() {
     this._isMounted = true
     this.initPlotlyData();
+    this.loadPlotlyCDN();
   }
 
   componentWillUnmount() {
@@ -46,7 +47,6 @@ class PlotlyDialog extends Component {
   }
 
   initPlotlyData = async (e) => {
-    await this.loadPlotlyCDN();
     let value = await this.props.getFileContent(); 
     value = value.replaceAll("'", '"').split("/*$plotlyData$*/"); // change all ' to ", needed for the json parse and split them with the keyword to extract the data
     let valueArray = [];
@@ -57,7 +57,6 @@ class PlotlyDialog extends Component {
       }catch(err){}
     }    
     this.setState({ plotlyData: valueArray, plotlyData_sel: 0});
-    this.loadPlot(0);
   } 
 
   handleClose = async () => {
@@ -89,19 +88,24 @@ class PlotlyDialog extends Component {
     this.loadPlot(nbr);
   }
 
-  loadPlotlyCDN = async () => {
+  loadPlotlyCDN = () => {
     const existingScript = document.getElementById('plotly');  
     if (!existingScript) {
       const script = document.createElement('script');
       script.src = 'https://cdn.plot.ly/plotly-basic-3.0.1.min.js';
       script.id = 'plotly';
+      script.async = true;
+      script.onload = () => this.loadPlot(0);
       document.body.appendChild(script);
+    }
+    else{
+      this.loadPlot(0);
     }
   }
 
   loadPlot = (nbr) => {
     try{
-      Plotly.newPlot( 
+      Plotly.react( 
         "plot", // PLot Figure ID
         this.state.plotlyData[nbr]["data"], // Plot figure Data
         this.state.plotlyData[nbr]["layout"], // Plot figure layout
