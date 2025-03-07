@@ -15,6 +15,7 @@ const propTypes = {
   onValidate: PropTypes.func,
   getFileContent: PropTypes.func
 };
+
 const defaultProps = { 
   readOnly: false,
   headerText: '',
@@ -38,8 +39,8 @@ class PlotlyDialog extends Component {
 
   componentDidMount() {
     this._isMounted = true
-    this.initPlotlyData();
     this.loadPlotlyCDN();
+    this.initPlotlyData();
   }
 
   componentWillUnmount() {
@@ -75,7 +76,6 @@ class PlotlyDialog extends Component {
       nbr = 0;
     }
     this.setState({ plotlyData_sel: nbr});
-    this.loadPlot(nbr);
   }
 
   handleBack = async () => {
@@ -85,7 +85,6 @@ class PlotlyDialog extends Component {
       nbr = this.state.plotlyData.length - 1;
     }
     this.setState({ plotlyData_sel: nbr});
-    this.loadPlot(nbr);
   }
 
   loadPlotlyCDN = () => {
@@ -94,12 +93,8 @@ class PlotlyDialog extends Component {
       const script = document.createElement('script');
       script.src = 'https://cdn.plot.ly/plotly-basic-3.0.1.min.js';
       script.id = 'plotly';
-      script.async = true;
-      script.onload = () => this.loadPlot(0);
+      script.async = false;
       document.body.appendChild(script);
-    }
-    else{
-      this.loadPlot(0);
     }
   }
 
@@ -150,7 +145,9 @@ class PlotlyDialog extends Component {
             {headerText}
           </div>
 
-          <div id="plot" className="oc-fm-plotly-dialog-plot"/>            
+          <div id="plot" className="oc-fm-plotly-dialog-plot"/>      
+
+          {this.loadPlot(this.state.plotlyData_sel)}      
 
         </div>
       </Dialog>
