@@ -99,6 +99,7 @@ class PlotlyDialog extends Component {
   }
 
   loadPlot = (nbr) => {
+    this.loadPlotlyCDN();
     try{
       Plotly.react( 
         "plot", // PLot Figure ID
