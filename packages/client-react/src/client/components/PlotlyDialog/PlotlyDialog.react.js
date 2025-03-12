@@ -94,12 +94,12 @@ class PlotlyDialog extends Component {
       script.src = 'https://cdn.plot.ly/plotly-basic-3.0.1.min.js';
       script.id = 'plotly';
       script.async = false;
+      script.onload = () => console.log('Plotly loaded; Plotting called again!', this.loadPlot(this.state.plotlyData_sel));
       document.body.appendChild(script);
     }
   }
 
   loadPlot = (nbr) => {
-    this.loadPlotlyCDN();
     try{
       Plotly.react( 
         "plot", // PLot Figure ID
@@ -110,7 +110,7 @@ class PlotlyDialog extends Component {
     }
     catch(e)
     {      
-      console.log("no Data available!"); // ToDo: This should get shown on Dialog
+      console.log("TryCatch Executed - maybe no Data available or Plotly not loaded!");
     }
   }
 
