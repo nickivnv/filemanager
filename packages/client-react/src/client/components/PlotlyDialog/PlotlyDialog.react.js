@@ -27,20 +27,24 @@ const defaultProps = {
   getFileContent: () => {}
 };
 
+let glob_view_plot_max_sized = 0;
+
 export default
 class PlotlyDialog extends Component {
   constructor(props) {
     super(props);
     this.state = {
       plotlyData_sel: 0,
-      plotlyData: {}
+      plotlyData: {},
+      plotDivs: [],
+      view_plot_max_sized: glob_view_plot_max_sized
     };
   }
 
   componentDidMount() {
     this._isMounted = true
-    this.loadPlotlyCDN();
     this.initPlotlyData();
+    this.loadPlotlyCDN();
   }
 
   componentWillUnmount() {
@@ -57,35 +61,10 @@ class PlotlyDialog extends Component {
         valueArray.push(JSON.parse(value[i]));
       }catch(err){}
     }    
-    this.setState({ plotlyData: valueArray, plotlyData_sel: 0});
+    this.setState({ plotlyData: valueArray });
+    this.setPlotDivs();
+    this.loadPlot();
   } 
-
-  handleClose = async () => {
-    this.handleSkipSaveAndClose();
-  }
-
-  handleSkipSaveAndClose = async () => {
-      this.props.onHide();
-      this.newText = null;
-  }
-
-  handleNext = async () => {
-    let nbr = this.state.plotlyData_sel + 1;
-    if ( nbr >= this.state.plotlyData.length)
-    {
-      nbr = 0;
-    }
-    this.setState({ plotlyData_sel: nbr});
-  }
-
-  handleBack = async () => {
-    let nbr = this.state.plotlyData_sel - 1;
-    if ( nbr < 0)
-    {
-      nbr = this.state.plotlyData.length - 1;
-    }
-    this.setState({ plotlyData_sel: nbr});
-  }
 
   loadPlotlyCDN = () => {
     const existingScript = document.getElementById('plotly');  
@@ -94,26 +73,131 @@ class PlotlyDialog extends Component {
       script.src = 'https://cdn.plot.ly/plotly-basic-3.0.1.min.js';
       script.id = 'plotly';
       script.async = false;
-      script.onload = () => console.log('Plotly loaded; Plotting called again!', this.loadPlot(this.state.plotlyData_sel));
+      script.onload = () => console.log('Plotly loaded; Plotting called again!', this.setPlotDivs(), this.loadPlot());
       document.body.appendChild(script);
     }
-  }
-
-  loadPlot = (nbr) => {
-    try{
-      Plotly.react( 
-        "plot", // PLot Figure ID
-        this.state.plotlyData[nbr]["data"], // Plot figure Data
-        this.state.plotlyData[nbr]["layout"], // Plot figure layout
-        {responsive: true}
-      );  
-    }
-    catch(e)
-    {      
-      console.log("TryCatch Executed - maybe no Data available or Plotly not loaded!");
+    else{
+      this.setPlotDivs();
+      this.loadPlot();
     }
   }
 
+  handleClose = async () => {
+    await this.purgePlots();
+    this.props.onHide();
+    this.newText = null;
+  }
+
+  handleNext = async () => {
+    this.setState({ plotlyData_sel: (this.state.plotlyData_sel + 1) >= this.state.plotlyData.length ? 0 : (this.state.plotlyData_sel + 1)});
+  }
+
+  handleBack = async () => {
+    this.setState({ plotlyData_sel: (this.state.plotlyData_sel - 1) < 0 ? this.state.plotlyData.length -1 : (this.state.plotlyData_sel - 1)});
+  }
+
+  handleGridToggle = async () => {
+    await this.purgePlots();
+    this.setState({ view_plot_max_sized: (this.state.view_plot_max_sized == 0 ? 1 : 0 )});
+    glob_view_plot_max_sized = this.state.view_plot_max_sized;
+    this.setPlotDivs();
+    this.loadPlot();
+  }
+
+  setPlotDivs = () => {    
+    if(this.state.view_plot_max_sized == 0)
+    {
+      let value = [];
+      for (var i = 0; i<this.state.plotlyData.length;i++)
+      {
+        value.push(<div id={this.state.plotlyData[i]["layout"]["title"]["text"]} className="oc-fm-plotly-dialog-plot_mult_plot"/>)
+      }
+      this.setState({ plotDivs : value});
+    }
+    else
+    {
+      this.setState({ plotDivs : [<div id="plot" class="oc-fm-plotly-dialog-plot"/>]});
+    }
+  }
+
+  purgePlots = async () => {
+    if( typeof Plotly === 'undefined') {
+      console.log("Plotly not defined!")
+    }
+    else{
+      try{  
+        if(this.state.plotDivs.length >0){
+          if(this.state.view_plot_max_sized == 0)
+          {
+            for (var i = 0; i<this.state.plotDivs.length;i++)
+            {
+              if (document.getElementById(this.state.plotlyData[i]["layout"]["title"]["text"]))
+              {
+                Plotly.purge(this.state.plotlyData[i]["layout"]["title"]["text"]);
+              }
+            }
+            this.setState({ plotDivs : []});
+          }
+          else
+          {
+            if (document.getElementById('plot'))
+            {
+              Plotly.purge("plot");
+              this.setState({ plotDivs : []});
+            }
+          }
+        }
+      }
+      catch(e)
+      {      
+        console.log("TryCatch Purge Executed");
+      }  
+    }
+  }
+
+  loadPlot = () => {
+    if( typeof Plotly === 'undefined') {
+      console.log("Plotly not defined!")
+    }
+    else{
+      try{  
+        if (this.state.plotlyData.length > 0 && this.state.plotDivs.length > 0){
+          if(this.state.view_plot_max_sized == 0)
+          {        
+            for (var i = 0; i<this.state.plotlyData.length;i++)
+            {
+              if (document.getElementById(this.state.plotlyData[i]["layout"]["title"]["text"]))
+              {
+                Plotly.react( 
+                  this.state.plotlyData[i]["layout"]["title"]["text"], // Plot Figure ID
+                  this.state.plotlyData[i]["data"], // Plot figure Data
+                  this.state.plotlyData[i]["layout"], // Plot figure layout
+                  {responsive: true}
+                ); 
+              }
+            }
+          }
+          else
+          {    
+            if (document.getElementById('plot'))
+            {
+              Plotly.react( 
+                "plot", // Plot Figure ID
+                this.state.plotlyData[this.state.plotlyData_sel]["data"], // Plot figure Data
+                this.state.plotlyData[this.state.plotlyData_sel]["layout"], // Plot figure layout
+                {responsive: true}
+              );  
+            }
+          }
+        }
+      }    
+      catch(e)
+      {      
+        console.log("TryCatch Plot Executed - maybe no Data available");
+      }      
+    }
+  }
+  
   render() {
     const { onHide, headerText } = this.props;
     return (
@@ -123,32 +207,46 @@ class PlotlyDialog extends Component {
           <Svg
             className="oc-plotly--dialog__close-icon"
             svg={icons.close}
+            title="Close"
             onClick={this.handleClose}
-          />                                   
+          />    
+
+          <Svg
+              className="oc-plotly--dialog__toggleView-icon"
+              svg={this.state.view_plot_max_sized==1 ? icons.change_view_one : icons.change_view_all}
+              title={this.state.view_plot_max_sized==1 ? "Show all plots smaller" : "Show plots maximized and one per page"}
+              onClick={this.handleGridToggle}
+            />                            
           
-          {this.state.plotlyData.length>1 ? (
-            <Svg
-              className="oc-plotly--dialog__next-icon"
-              svg={icons.next}
-              onClick={this.handleNext}
-            />   
-          ) : null}                            
-        
-          {this.state.plotlyData.length>1 ? (
-            <Svg
-              className="oc-plotly--dialog__back-icon"
-              svg={icons.back}
-              onClick={this.handleBack}
-            />        
-          ) : null} 
+          {
+            (this.state.view_plot_max_sized==1 && this.state.plotlyData.length>1) ? (
+              <Svg
+                className="oc-plotly--dialog__next-icon"
+                svg={icons.next}
+                title="Switch to next plot"
+                onClick={this.handleNext}
+              />   
+            ) : null    
+          }                       
+            
+          {
+            (this.state.view_plot_max_sized==1 && this.state.plotlyData.length>1) ? (
+              <Svg
+                className="oc-plotly--dialog__back-icon"
+                svg={icons.back}
+                title="Switch to previous plot"
+                onClick={this.handleBack}
+              />        
+            ) : null
+          }
 
           <div className="oc-fm--dialog__header">
             {headerText}
+          </div>  
+          <div class="oc-fm-plotly-dialog-plot_scroll">
+            {this.state.plotDivs}
           </div>
-
-          <div id="plot" className="oc-fm-plotly-dialog-plot"/>      
-
-          {this.loadPlot(this.state.plotlyData_sel)}      
+          {this.loadPlot()}
 
         </div>
       </Dialog>
