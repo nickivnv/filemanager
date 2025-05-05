@@ -22,7 +22,7 @@ function handler(apiOptions, actions) {
   const localeLabel = getMessage(label);
 
   const selectedResources = getSelectedResources();
-  const filesizelimit = 100;
+  const filesizelimit = 500; // increade to 500 KB because the data sets of plot data can get big
   // ToDo check if this is necessary?
   if (selectedResources[0].size / 1024 > filesizelimit) {
     onFailError({
