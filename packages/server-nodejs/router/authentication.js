@@ -3,6 +3,7 @@
 const path = require('path');
 const fs = require('fs-extra');
 const getClientIp = require('../utils/get-client-ip');
+let fails = null;
 
 module.exports = ({
   config,
@@ -17,27 +18,46 @@ module.exports = ({
 
   switch(subreq) {
     case 'signin':
+      const lockFile = config.loginLockoutStateFile;
+      if (!fails) { try { fails = fs.readJsonSync(lockFile); } catch (err) { fails = {}; } }
+      const saveFails = () => { try { fs.writeJsonSync(lockFile, fails); } catch (err) { /* nicht schreibbar */ } };
+
       let { username, password } = req.body;
       username = Buffer.from(username,'base64').toString();
       password = Buffer.from(password,'base64').toString();
 //      console.log(`username:${username} pasword:${password}`);
+
+      const rec = fails[username] || { count: 0, until: 0 };
+      if (rec.until > Date.now()) {
+        res.status(429).json({ retryAfter: Math.ceil((rec.until - Date.now()) / 1000) });
+        return;
+      }
+
       const user = config.users ? config.users.find( user => (user.username === username) && (user.password === password)) : false;
+
       if ( user ) {
 //        console.log(`200 username:${username} password:${password}`);
+        if (fails[username]) { delete fails[username]; saveFails(); }
         req.session.user = {username: username, readOnly: user.readOnly};
         res.json({username: user.username});
         res.status(200).end();
-      } else {
-        if (config.users) {
-//          console.log(`419 username:${username} password:${password}`);
-          res.status(419).end();
-        } else {
-          res.json({username: ''});
-          res.status(200).end();
+      } else if (config.users) {
+        if (!config.users.some(u => u.username === username)) { res.status(419).end(); return; }
+        config.logger.warn(`Failed sign-in for user "${username}" from ${getClientIp(req)}`);
+        rec.count += 1;
+        if (rec.count >= 3) { rec.count = 0; rec.until = Date.now() + 15 * 60 * 1000; }
+        fails[username] = rec;
+        saveFails();
+        if (rec.until > Date.now()) {
+          res.status(429).json({ retryAfter: 15 * 60 });
+          return;
         }
+        res.status(419).end();
+      }
+      else {
+        res.status(200).json({ username: '' });
       }
       break;
-
     case 'signout':
       req.session.destroy();
       res.status(200).end();

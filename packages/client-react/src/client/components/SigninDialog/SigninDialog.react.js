@@ -39,7 +39,8 @@ class SigninDialog extends Component {
       username: props.initalUsernameValue,
       password: props.initalPasswordValue,
       validationError: null,
-      valid: false
+      valid: false,
+      lockedUntil: 0
     };
   }
 
@@ -48,7 +49,8 @@ class SigninDialog extends Component {
   }
 
   componentWillUnmount() {
-    this._isMounted = false
+    this._isMounted = false;
+    clearInterval(this.timer);
   }
 
   handleChange = async (e) => {
@@ -74,10 +76,24 @@ class SigninDialog extends Component {
   }
 
   handleSubmit = async () => {
-    const validationError = await this.props.onSubmit(this.state.username, this.state.password);
+    if (this.state.lockedUntil > Date.now()) return;
 
-    if (validationError && this._isMounted) {
-      this.setState({ validationError });
+    const result = await this.props.onSubmit(this.state.username, this.state.password);
+    if (!this._isMounted) return;
+
+    if (result && result.retryAfter) {
+      this.setState({ lockedUntil: Date.now() + result.retryAfter * 1000, password: '' });
+      this.timer = this.timer || setInterval(() => {
+        if (this.state.lockedUntil > Date.now()) {
+          this.forceUpdate();
+        } else {
+          clearInterval(this.timer);
+          this.timer = null;
+          this.setState({ lockedUntil: 0 });
+        }
+      }, 1000);
+    } else if (result) {
+      this.setState({ validationError: result });
     }
   }
 
@@ -90,9 +106,16 @@ class SigninDialog extends Component {
 
   render() {
     const { onHide, headerText, usernameLabelText, passwordLabelText, messageText, submitButtonText, cancelButtonText } = this.props;
-    const { username, password, validationError, valid } = this.state;
+    const { username, password, validationError, valid, lockedUntil } = this.state;
 
-    const showValidationErrorElement = typeof validationError === 'string' && validationError;
+    const left = lockedUntil - Date.now();
+    const locked = left > 0;
+    const sec = Math.ceil(left / 1000);
+    const displayedError = locked ?
+      `Too many failed attempts. Please try again in ${Math.floor(sec / 60)}:${('0' + (sec % 60)).slice(-2)}.` :
+      validationError;
+
+    const showValidationErrorElement = typeof displayedError === 'string' && displayedError;
     const validationErrorElement = (
       <div
         className={`
@@ -100,7 +123,7 @@ class SigninDialog extends Component {
           ${showValidationErrorElement ? '' : 'oc-fm--dialog__validation-error--hidden'}
         `}
       >
-        {validationError || <span>&nbsp;</span>}
+        {displayedError || <span>&nbsp;</span>}
       </div>
     );
 
@@ -128,8 +151,8 @@ class SigninDialog extends Component {
             `}
             name="username"
             value={username}
+            disabled={locked}
             onChange={this.handleChange}
-            onFocus={this.handleFocus}
           />
 
           {passwordLabelText && (
@@ -146,8 +169,8 @@ class SigninDialog extends Component {
             `}
             name="password"
             value={password}
+            disabled={locked}
             onChange={this.handleChange}
-            onFocus={this.handleFocus}
           />          
           {validationErrorElement}
 
@@ -159,7 +182,7 @@ class SigninDialog extends Component {
               type="button"
               className={`oc-fm--dialog__button oc-fm--dialog__button--primary`}
               onClick={this.handleSubmitButtonClick}
-              disabled={!valid}
+              disabled={!valid || locked}
             >
               {submitButtonText}
             </button>

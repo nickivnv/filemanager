@@ -164,6 +164,10 @@ async function signIn(options, username, password) {
     const response = await request.post(route).send({username: btoa(username), password: btoa(password)});
     return {username: response.body.username};
   } catch (err) {
+    const status = err.status || (err.response && err.response.status);
+    if (status === 429) {
+      return { retryAfter: ((err.response && err.response.body) || {}).retryAfter || 900 };
+    }
     return false;
   }
 }
