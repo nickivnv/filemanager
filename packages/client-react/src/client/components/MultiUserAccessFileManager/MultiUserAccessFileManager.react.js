@@ -29,13 +29,18 @@ class MultiUserAccessFileManager extends Component {
   }
 
   onSignin = async (username, password) => {
-//    console.log('Username:' + username + ' Password:' + password);
-    let response = await api.signIn(apiOptions, username, password);
-    if (response) {
-      this.setState( () => ({showsignin: false}));
-    } else {
-      return 'Invalid username or password.'
+    const response = await api.signIn(apiOptions, username, password);
+
+    if (response && response.username) {
+      this.setState(() => ({ showsignin: false }));
+      return;
     }
+
+    if (response && response.locked) {
+      return { locked: true, retryAfterMs: response.retryAfter * 1000 };
+    }
+
+    return 'Invalid username or password.';
   }
 
   onSignout = async () => {
