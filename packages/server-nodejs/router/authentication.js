@@ -3,7 +3,7 @@
 const path = require('path');
 const fs = require('fs-extra');
 const getClientIp = require('../utils/get-client-ip');
-let fails = null;
+let fails;
 
 module.exports = ({
   config,
@@ -19,8 +19,13 @@ module.exports = ({
   switch(subreq) {
     case 'signin':
       const lockFile = config.loginLockoutStateFile;
-      if (!fails) { try { fails = fs.readJsonSync(lockFile); } catch (err) { fails = {}; } }
-      const saveFails = () => { try { fs.writeJsonSync(lockFile, fails); } catch (err) { /* nicht schreibbar */ } };
+      try { fails = fs.readJsonSync(lockFile); } catch (err) { fails = {}; }
+      const saveFails = () => {
+        try {
+          fs.writeJsonSync(lockFile + '.tmp', fails);
+          fs.moveSync(lockFile + '.tmp', lockFile, { overwrite: true });
+        } catch (err) { /* nicht schreibbar */ }
+      };
 
       let { username, password } = req.body;
       username = Buffer.from(username,'base64').toString();
