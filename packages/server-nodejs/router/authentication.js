@@ -37,7 +37,7 @@ module.exports = ({
       const now = Date.now();
       const rec = fails[username] || { count: 0, until: 0, last: 0 };
       if (rec.until > now) {
-        res.status(429).json({ retryAfter: Math.ceil((rec.until - Date.now()) / 1000) });
+        res.status(429).json({ retryAfter: Math.ceil((rec.until - now) / 1000) });
         return;
       }
 
@@ -57,7 +57,7 @@ module.exports = ({
         if (rec.count >= 3) { rec.count = 0; rec.until = now + LOCK_MS; }
         fails[username] = rec;
         saveFails();
-        if (rec.until > Date.now()) {
+        if (rec.until > now) {
           res.status(429).json({ retryAfter: LOCK_MS / 1000 });
           return;
         }
