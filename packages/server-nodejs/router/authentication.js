@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs-extra');
 const getClientIp = require('../utils/get-client-ip');
 let fails;
+const LOCK_MS = 15 * 60 * 1000;
+
 
 module.exports = ({
   config,
@@ -32,8 +34,9 @@ module.exports = ({
       password = Buffer.from(password,'base64').toString();
 //      console.log(`username:${username} pasword:${password}`);
 
-      const rec = fails[username] || { count: 0, until: 0 };
-      if (rec.until > Date.now()) {
+      const now = Date.now();
+      const rec = fails[username] || { count: 0, until: 0, last: 0 };
+      if (rec.until > now) {
         res.status(429).json({ retryAfter: Math.ceil((rec.until - Date.now()) / 1000) });
         return;
       }
@@ -49,12 +52,13 @@ module.exports = ({
       } else if (config.users) {
         if (!config.users.some(u => u.username === username)) { res.status(419).end(); return; }
         config.logger.warn(`Failed sign-in for user "${username}" from ${getClientIp(req)}`);
-        rec.count += 1;
-        if (rec.count >= 3) { rec.count = 0; rec.until = Date.now() + 15 * 60 * 1000; }
+        rec.count = (now - (rec.last || 0) > LOCK_MS) ? 1 : rec.count + 1;
+        rec.last = now;
+        if (rec.count >= 3) { rec.count = 0; rec.until = now + LOCK_MS; }
         fails[username] = rec;
         saveFails();
         if (rec.until > Date.now()) {
-          res.status(429).json({ retryAfter: 15 * 60 });
+          res.status(429).json({ retryAfter: LOCK_MS / 1000 });
           return;
         }
         res.status(419).end();
