@@ -9,5 +9,5 @@ module.exports = config => router({
   users: config.users,
   readOnly: config.readOnly,
   logger: config.logger || logger,
-  loginLockoutStateFile: config.loginLockoutStateFile
+  loginLockoutStateFile: config.loginLockoutStateFile || process.env.FM_LOCK_FILE
 });
